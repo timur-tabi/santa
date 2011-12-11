@@ -8,12 +8,46 @@ import datetime
 import random
 from optparse import OptionParser, OptionGroup
 
-parser = OptionParser(usage="usage: %prog [options] files-to-upload ...")
-parser.add_option("-s", dest="send", help="send emails and save results", action="store_true")
-parser.add_option("-t", dest="test", help="send to Timur instead", action="store_true")
+# Prevent optparse from stripping newlines from the epilog
+OptionParser.format_epilog = lambda self, formatter: self.epilog
+
+parser = OptionParser(usage="usage: %prog [options]", epilog='\n' +
+	'-g and -t options are mutually exclusive\n' +
+	'-g and -t options require --smtp option\n' +
+	'-g option requires --santa option\n' +
+	'-t option requires -m option\n')
+
+parser.add_option("-g", dest="go", help="send emails and save results", action="store_true")
+parser.add_option("-t", dest="test", help="send to yourself instead, does not save results",
+	action="store_true")
 parser.add_option("-v", dest="view", help="view results", action="store_true")
+parser.add_option("-m", dest="me", help="my email address (default=%default)",
+	default=os.getenv('EMAIL'))
+parser.add_option("--santa", dest="santa", help="Santa's email address")
+parser.add_option("--smtp", dest="smtp", help="SMTP server (default=%default)",
+	default=os.getenv('SMTP_SERVER'))
 
 (options, args) = parser.parse_args()
+
+if options.test and not options.me:
+	print '-t option requires -m option'
+	sys.exit(1)
+
+if options.test and options.go:
+	print  '-g and -t options are mutually exclusive'
+	sys.exit(1)
+
+if (options.go or options.test) and not options.smtp:
+	print '-g and -t options require --smtp option'
+	sys.exit(1)
+
+if options.go and not options.santa:
+	print '-g option requires --santa option'
+	sys.exit(1)
+
+# Don't require --santa if we're just testing
+if options.test and not options.santa:
+	options.santa = options.me
 
 people = []
 nomatch = []
@@ -24,10 +58,9 @@ def send_email(giver, recipient):
 	global options
 
 	if options.test:
-		toaddr = 'Timur Tabi <timur@tabi.org>'
+		toaddr = options.me
 	else:
 		toaddr = '%s <%s>' % (giver[0], giver[1])
-	fromaddr = 'Secret Santa <santa@augsburger.org>'
 	year = str(datetime.date.today().year)
 
 	body = 'Hello ' + giver[0].split()[0] + ',\n' + \
@@ -37,18 +70,21 @@ def send_email(giver, recipient):
 		'\t\t' + recipient[0] + '\n'
 
 	msg = 'To: ' + toaddr + '\n' + \
-		'From: santa@augsburger.org\n' + \
+		'From: Secret Santa <' + options.santa + '>\n' + \
 		'Subject: Christmas ' + year + ' Secret Santa\n' + \
 		'Content-type: text/plain\n' + \
 		'\n' + \
 		body
 
 	print 'Sending email to', toaddr
-	server = smtplib.SMTP('smtp-server.austin.rr.com')
-	server.sendmail('santa@augsburger.org', toaddr, msg)
+	server = smtplib.SMTP(options.smtp)
+	server.sendmail(options.santa, toaddr, msg)
 	server.quit()
 
 def send_emails():
+	global options
+
+	print 'Sending emails using SMTP server', options.smtp
 	for match in thisyear:
 		send_email(match[0], match[1])
 
@@ -163,6 +199,8 @@ if options.view:
 	for match in thisyear:
 		print match
 
-if options.send:
+if options.go or options.test:
 	send_emails()
+
+if options.go:
 	save_thisyear()
