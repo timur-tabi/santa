@@ -4,6 +4,7 @@ import sys
 import os
 import re
 import smtplib
+import socket
 import datetime
 import random
 from optparse import OptionParser, OptionGroup
@@ -29,12 +30,12 @@ parser.add_option("--smtp", dest="smtp", help="SMTP server (default=%default)",
 
 (options, args) = parser.parse_args()
 
-if options.test and not options.me:
-	print '-t option requires -m option'
-	sys.exit(1)
-
 if options.test and options.go:
 	print  '-g and -t options are mutually exclusive'
+	sys.exit(1)
+
+if (options.go or options.test) and not options.me:
+	print '-g and -t options require -m option'
 	sys.exit(1)
 
 if (options.go or options.test) and not options.smtp:
@@ -53,6 +54,42 @@ people = []
 nomatch = []
 lastyear = []
 thisyear = []
+
+# Return the MX server for a given domain
+def get_mx_server(domain):
+	# this is a hack, but it's better than requiring some obscure Python module
+	f = os.popen('host -t mx ' + domain)
+	for line in f:
+		if line.find("mail is handled by") != -1:
+            		return line.rstrip().split()[-1]
+
+	# this is probably a bad idea
+	return domain
+
+# Verify the email addresses in people.txt
+def verify_people():
+	global options
+	global people
+
+	print 'Verifying email addresses'
+	for person in people:
+		domain = person[1].split('@')[1]
+		try:
+			ip = socket.gethostbyname(domain)
+			# OpenDNS' returns a specific IP address for invalid domains
+			if ip == '67.215.65.132':
+				raise socket.error
+			server = smtplib.SMTP(get_mx_server(domain))
+			response = server.verify(person[1])
+			# Most SMTP servers will return 502 to indicate the vrfy command
+			# is disabled, so the only way to know if an address is invalid
+			# is to check for code 550
+			if response[0] == 550:
+				raise socket.error
+			server.quit()
+		except:
+			print person[1], 'is not a valid email address'
+			sys.exit(1)
 
 def send_email(giver, recipient):
 	global options
@@ -78,7 +115,7 @@ def send_email(giver, recipient):
 
 	print 'Sending email to', toaddr
 	server = smtplib.SMTP(options.smtp)
-	server.sendmail(options.santa, toaddr, msg)
+	server.sendmail(options.me, toaddr, msg)
 	server.quit()
 
 def send_emails():
@@ -171,6 +208,7 @@ def find_santas():
 	global thisyear
 	global people
 
+	print 'Finding Santas'
 	while True:
 		giver = people[:]
 		recipient = people[:]
@@ -191,6 +229,7 @@ def save_thisyear():
 	f.close()
 
 get_names()
+verify_people()
 read_nomatch()
 read_lastyear()
 find_santas()
@@ -204,3 +243,5 @@ if options.go or options.test:
 
 if options.go:
 	save_thisyear()
+
+print 'Done'
