@@ -55,42 +55,6 @@ nomatch = []
 lastyear = []
 thisyear = []
 
-# Return the MX server for a given domain
-def get_mx_server(domain):
-	# this is a hack, but it's better than requiring some obscure Python module
-	f = os.popen('host -t mx ' + domain)
-	for line in f:
-		if line.find("mail is handled by") != -1:
-            		return line.rstrip().split()[-1]
-
-	# this is probably a bad idea
-	return domain
-
-# Verify the email addresses in people.txt
-def verify_people():
-	global options
-	global people
-
-	print 'Verifying email addresses'
-	for person in people:
-		domain = person[1].split('@')[1]
-		try:
-			ip = socket.gethostbyname(domain)
-			# OpenDNS' returns a specific IP address for invalid domains
-			if ip == '67.215.65.132':
-				raise socket.error
-			server = smtplib.SMTP(get_mx_server(domain))
-			response = server.verify(person[1])
-			# Most SMTP servers will return 502 to indicate the vrfy command
-			# is disabled, so the only way to know if an address is invalid
-			# is to check for code 550
-			if response[0] == 550:
-				raise socket.error
-			server.quit()
-		except:
-			print person[1], 'is not a valid email address'
-			sys.exit(1)
-
 def send_email(giver, recipient):
 	global options
 
@@ -229,7 +193,6 @@ def save_thisyear():
 	f.close()
 
 get_names()
-verify_people()
 read_nomatch()
 read_lastyear()
 find_santas()
