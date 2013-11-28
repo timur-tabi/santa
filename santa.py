@@ -112,15 +112,16 @@ def read_lastyear():
 
 	filename = str(datetime.date.today().year - 1) + '.txt'
 
-	f = open(filename)
-	lines = f.readlines()
-	f.close
-
-	for line in lines:
-		(giver, recipient) = line.split(',');
-		giver = find_person(giver.strip())
-		recipient = find_person(recipient.strip())
-		lastyear.append([giver, recipient])
+	try:
+		f = open(filename)
+	except:
+		return
+	else:
+		for line in f.readlines():
+			(giver, recipient) = line.split(',');
+			giver = find_person(giver.strip())
+			recipient = find_person(recipient.strip())
+			lastyear.append([giver, recipient])
 
 def read_nomatch():
 	filename = "nomatch.txt"
