@@ -68,7 +68,9 @@ def send_email(giver, recipient):
 		'\n' + \
 		'This year, you will be giving a Christmas gift to:\n' + \
 		'\n' + \
-		'\t\t' + recipient[0] + '\n'
+		'\t\t' + recipient[0] + '\n\n' + \
+		'Don''t forget to update your Amazon wishlist: ' + \
+		'http://www.amazon.com/gp/registry/wishlist/\n'
 
 	msg = 'To: ' + toaddr + '\n' + \
 		'From: Secret Santa <' + options.santa + '>\n' + \
