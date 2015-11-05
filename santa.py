@@ -69,12 +69,15 @@ def send_email(giver, recipient):
 		'This year, you will be giving a Christmas gift to:\n' + \
 		'\n' + \
 		'\t\t' + recipient[0] + '\n\n' + \
-		'Don''t forget to update your Amazon wishlist: ' + \
+		'Don\'t forget to update your Amazon wishlist: ' + \
 		'http://www.amazon.com/gp/registry/wishlist/\n'
 
 	msg = 'To: ' + toaddr + '\n' + \
 		'From: Secret Santa <' + options.santa + '>\n' + \
 		'Subject: Christmas ' + year + ' Secret Santa\n' + \
+		'X-Errors-To: ' + options.me +'\n' + \
+		'X-Mailer: https://github.com/timur-tabi/santa\n' + \
+		'X-Sender: ' + options.me +'\n' + \
 		'Content-type: text/plain\n' + \
 		'\n' + \
 		body
